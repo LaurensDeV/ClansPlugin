@@ -23,10 +23,11 @@ namespace ClansPlugin
 
 
 		public override void Initialize()
-		{		
+		{
 			ClanDB.Instance.Initialize();
 
 			Commands.ChatCommands.Add(new Command(ClanCommand, "clan"));
+			Commands.ChatCommands.Add(new Command(ClanCommands.CSayCommand, "c"));
 
 			PlayerHooks.PlayerPostLogin += PlayerHooks_PlayerPostLogin;
 			PlayerHooks.PlayerLogout += PlayerHooks_PlayerLogout;
@@ -44,63 +45,21 @@ namespace ClansPlugin
 
 		private void ClanCommand(CommandArgs args)
 		{
-			string cmd = args.Parameters.Count > 0 ? args.Parameters[0] : "help";
-			List<string> newargs = args.Parameters.GetRange(1, args.Parameters.Count - 1);
-			CommandArgs newCmdArgs = new CommandArgs(args.Message.Remove(0, args.Message.IndexOf(' ')), args.Player, newargs);
-
-			switch (cmd)
+			if (!args.Player.IsLoggedIn)
 			{
-				case "create":
-					ClanCommands.MotdCommand(newCmdArgs);
-					break;
-				case "disband":
-					ClanCommands.DisbandCommand(newCmdArgs);
-					break;
-				case "motd":
-					ClanCommands.MotdCommand(newCmdArgs);
-					break;
-				case "prefix":
-					ClanCommands.PrefixCommand(newCmdArgs);
-					break;
-				case "color":
-					ClanCommands.ColorCommand(newCmdArgs);
-					break;
-				case "promote":
-					ClanCommands.PromoteCommand(newCmdArgs);
-					break;
-				case "demote":
-					ClanCommands.DemoteCommand(newCmdArgs);
-					break;
-				case "kick":
-					ClanCommands.KickCommand(newCmdArgs);
-					break;
-				case "quit":
-					ClanCommands.QuitCommand(newCmdArgs);
-					break;
-				case "leave":
-					ClanCommands.LeaveCommand(newCmdArgs);
-					break;
-				case "invite":
-					ClanCommands.InviteCommand(newCmdArgs);
-					break;
-				case "accept":
-					ClanCommands.AcceptCommand(newCmdArgs);
-					break;
-				case "members":
-					ClanCommands.MembersCommand(newCmdArgs);
-					break;
-				case "list":
-					ClanCommands.ListCommand(newCmdArgs);
-					break;
-				case "csay":
-				case "c":
-					ClanCommands.CSayCommand(newCmdArgs);
-					break;
-				case "help":
-				default:
-					ClanCommands.HelpCommand(newCmdArgs);
-					break;
+				args.Player.SendErrorMessage("You need to be logged in to use this command!");
+				return;
 			}
+
+			string cmd = args.Parameters.Count > 0 ? args.Parameters[0] : "help";
+			List<string> newargs = args.Parameters.Count == 0 ? args.Parameters : args.Parameters.GetRange(1, args.Parameters.Count - 1);
+			CommandArgs newCmdArgs = new CommandArgs(args.Message.Remove(0, args.Message.IndexOf(' ') + 1), args.Player, newargs);
+
+			var command = ClanCommands.GetCommand(cmd);
+			if (command != null)
+				command.Invoke(newCmdArgs);
+			else
+				ClanCommands.GetCommand("help").Invoke(newCmdArgs);
 		}
 
 		protected override void Dispose(bool disposing)

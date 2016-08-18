@@ -47,6 +47,9 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="TerrariaServer">
+      <HintPath>..\..\..\..\..\..\Downloads\tshock\TerrariaServer.exe</HintPath>
+    </Reference>
     <Reference Include="TShockAPI">
       <HintPath>..\..\..\..\..\Downloads\TShock\ServerPlugins\TShockAPI.dll</HintPath>
     </Reference>

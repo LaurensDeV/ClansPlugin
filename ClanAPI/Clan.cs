@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ClanAPI.DB;
+﻿using ClanAPI.DB;
 using MySql.Data.MySqlClient;
+using TShockAPI;
 
 namespace ClanAPI
 {
 	[DBTable("Clans")]
 	public class Clan
 	{
+		public const string DefaultChatColor = "235,78,30";
+
 		[DBColumn("Name", MySqlDbType.VarChar, Primary = true, Length = 30)]
 		public string Name { get; set; }
 
@@ -25,5 +23,25 @@ namespace ClanAPI
 
 		[DBColumn("ChatColor", MySqlDbType.VarChar)]
 		public string ChatColor { get; set; }
+
+		public Clan(string name)
+		{
+			Name = name;
+			Description = "";
+			Suffix = "";
+			Prefix = "";
+			ChatColor = DefaultChatColor;
+		}
+
+		public void SendMessage(string msg, params string[] args)
+		{
+			foreach (TSPlayer ts in TShock.Players)
+			{
+				if (ts.GetClan() != this)
+					continue;
+
+				ts.SendMessage(string.Format(msg, args), ChatColor.Parse());
+			}
+		}
 	}
 }

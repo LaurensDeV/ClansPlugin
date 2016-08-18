@@ -15,6 +15,7 @@ namespace ClanAPI.DB
 {
 	public class ClanDB
 	{
+		internal Dictionary<string, Clan> ClanCache;
 		public const string MemberKey = "member";
 		public const string ClanKey = "clan";
 
@@ -33,6 +34,7 @@ namespace ClanAPI.DB
 		[Obsolete("Please do not use this method.")]
 		public void Initialize()
 		{
+			ClanCache = new Dictionary<string, Clan>();
 			switch (TShock.Config.StorageType.ToLower())
 			{
 				case "mysql":
@@ -79,6 +81,27 @@ namespace ClanAPI.DB
 			ts.SetData(MemberKey, mbr);
 		}
 
+		public async void AddClan(TSPlayer ts, string name)
+		{
+			Clan clan = await GetObjectFromDatabase<Clan>("SELECT * FROM Clans WHERE Name = @0", name);
+			if (clan != null)
+			{
+				ts.SendErrorMessage("A clan with this name already exists!");
+				return;
+			}
+			clan = new Clan(name);
+			await InsertObjectInDatabase<Clan>(clan);
+			ClanCache.Add(clan.Name, clan);
+		}
+
+		public async void LoadClans()
+		{
+			ClanCache.Clear();
+			Clan[] clans = await GetObjectArrayFromDatabase<Clan>("SELECT * FROM Clans");
+			for (int i = 0; i < clans.Length; i++)
+				ClanCache.Add(clans[i].Name, clans[i]);
+		}
+
 		public async Task InsertObjectInDatabase<T>(object obj) where T : class
 		{
 			await Task.Run(() =>
@@ -98,6 +121,32 @@ namespace ClanAPI.DB
 			});
 		}
 
+		public Task<T[]> GetObjectArrayFromDatabase<T>(string query, params object[] args) where T : class
+		{
+			List<T> results = new List<T>();
+			return Task.Run<T[]>(() =>
+			{
+				var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
+
+				using (QueryResult reader = connection.QueryReader(query, args))
+				{
+					while (reader.Read())
+					{
+						foreach (var info in properties)
+						{
+							var instance = (T)Activator.CreateInstance(typeof(T));
+							var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
+							object value = reader.Get<object>(attrib.Name);
+							instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
+							results.Add(instance);
+						}
+						
+					}
+					return results.ToArray();
+				}
+			});
+		}
+
 		public Task<T> GetObjectFromDatabase<T>(string query, params object[] args) where T : class
 		{
 			return Task.Run<T>(() =>
@@ -111,7 +160,6 @@ namespace ClanAPI.DB
 						foreach (var info in properties)
 						{
 							var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
-							T type = (T)Convert.ChangeType(info.GetType(), typeof(T));
 							object value = reader.Get<object>(attrib.Name);
 							instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
 						}
