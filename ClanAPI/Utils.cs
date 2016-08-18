@@ -13,7 +13,5 @@ namespace ClanAPI
 		{
 			return ts.GetData<Member>("member");
 		}
-
-
 	}
 }

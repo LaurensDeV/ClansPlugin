@@ -7,6 +7,6 @@ namespace ClanAPI
 	public class Member
 	{
 		[DBColumn("Username", MySqlDbType.VarChar, Primary = true)]
-		public string Name { get; set; }
+		public string Username { get; set; }
 	}
 }
