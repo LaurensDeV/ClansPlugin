@@ -11,6 +11,13 @@ namespace ClanAPI
 {
 	public static class Utils
 	{
+		public static Clan GetClanByName(string name)
+		{
+			if (ClanDB.Instance.ClanCache.ContainsKey(name))
+				return ClanDB.Instance.ClanCache[name];
+			return null;
+		}
+
 		public static Member GetMember(this TSPlayer ts)
 		{
 			return ts.GetData<Member>(ClanDB.MemberKey);
@@ -18,18 +25,15 @@ namespace ClanAPI
 
 		public static bool IsInClan(this TSPlayer ts)
 		{
-			return ts.GetMember() != null;
+			Member mbr;
+			return (mbr = ts.GetMember()) != null && GetClanByName(mbr.Clan) != null;
 		}
 
 		public static Clan GetClan(this TSPlayer ts)
 		{
 			if (!string.IsNullOrEmpty(ts.GetMember()?.Clan))
-			{
-				Console.WriteLine(ts.GetMember().Clan);
-				Clan clan;
-				if (ClanDB.Instance.ClanCache.TryGetValue(ts.GetMember().Clan, out clan))
-					return clan;
-			}
+				return GetClanByName(ts.GetMember().Clan);
+			
 			return null;
 		}
 

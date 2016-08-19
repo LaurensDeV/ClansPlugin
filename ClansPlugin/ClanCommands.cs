@@ -29,7 +29,7 @@ namespace ClansPlugin
 			string clanName = string.Join(" ", args.Parameters);
 			//max length check;
 
-			Task.Run(async() =>
+			Task.Run(async () =>
 			{
 				if (await ClanDB.Instance.AddClan(args.Player, clanName))
 					args.Player.SendInfoMessage("Your clan was created successfully.");
@@ -38,55 +38,61 @@ namespace ClansPlugin
 			});
 		}
 
-		[ClanCommand("motd", Parameters = "[new motd]", Description = "Gets or sets the clan's MotD.")]
+		[ClanCommand("motd", Parameters = "[new motd]", Description = "Gets or sets the clan's MotD.", Permission = Rank.Owner)]
 		internal static void MotdCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("disband", Parameters = "[confirm]", Description = "Disbands your current clan.")]
+		[ClanCommand("disband", Parameters = "[confirm]", Description = "Disbands your current clan.",Permission = Rank.Owner)]
 		internal static void DisbandCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("prefix", Parameters = "[new prefix]", Description = "Gets or sets your clan's prefix.")]
+		[ClanCommand("prefix", Parameters = "[new prefix]", Description = "Gets or sets your clan's prefix.", Permission = Rank.Owner)]
 		internal static void PrefixCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("color", Parameters = "[new color (255,255,255)]", Description = "Gets or sets your clan's chatcolor.")]
+		[ClanCommand("color", Parameters = "[new color (255,255,255)]", Description = "Gets or sets your clan's chatcolor.", Permission = Rank.Owner)]
 		internal static void ColorCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("promote", Parameters = "<player>", Description = "Promotes a player in your clan.")]
+		[ClanCommand("promote", Parameters = "<player>", Description = "Promotes a player in your clan.", Permission = Rank.Owner)]
 		internal static void PromoteCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("demote", Parameters = "<player>", Description = "Demotes a player in your clan.")]
+		[ClanCommand("demote", Parameters = "<player>", Description = "Demotes a player in your clan.", Permission = Rank.Owner)]
 		internal static void DemoteCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("kick", Parameters = "<player> [reason]", Description = "Kicks a player from your clan.")]
+		[ClanCommand("kick", Parameters = "<player> [reason]", Description = "Kicks a player from your clan.", Permission = Rank.Admin)]
 		internal static void KickCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("leave", Description = "Leave your current clan.")]
+		[ClanCommand("mute", Parameters = "<player> [reason]", Description = "Mute a player in the clan.", Permission = Rank.Moderator)]
+		internal static void MuteCommand(CommandArgs args)
+		{
+			throw new NotImplementedException();
+		}
+
+		[ClanCommand("leave", Description = "Leave your current clan.", Permission = Rank.Recruit)]
 		internal static void LeaveCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("invite", Parameters = "<player>", Description = "Invite a player to your clan.")]
+		[ClanCommand("invite", Parameters = "<player>", Description = "Invite a player to your clan.", Permission = Rank.Helper)]
 		internal static void InviteCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
@@ -98,7 +104,7 @@ namespace ClansPlugin
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("members", Description = "Lists all your clan's members.")]
+		[ClanCommand("members", Description = "Lists all your clan's members.", Permission = Rank.Recruit)]
 		internal static void MembersCommand(CommandArgs args)
 		{
 			throw new NotImplementedException();
@@ -110,7 +116,7 @@ namespace ClansPlugin
 			throw new NotImplementedException();
 		}
 
-		[ClanCommand("c", Parameters = "(or /c) <message>", Description = "Sends a message to your clan.")]
+		[ClanCommand("c", Parameters = "(or /c) <message>", Description = "Sends a message to your clan.", Permission = Rank.Recruit)]
 		internal static void CSayCommand(CommandArgs args)
 		{
 			Clan clan = args.Player.GetClan();
@@ -130,7 +136,7 @@ namespace ClansPlugin
 				return;
 			}
 			string message = string.Join(" ", args.Parameters);
-			clan.SendMessage("{{clans - {0}}} {1} {2}: {3}", clan.Name, clan.RankNames[(int)args.Player.GetMember().Rank],args.Player.Name, message);
+			clan.SendMessage("{0} {1} {2}: {3} {4}", clan.Prefix, clan.RankNames[(int)args.Player.GetMember().Rank], args.Player.Name, message, clan.Suffix);
 		}
 
 		[ClanCommand("help", Description = "gives info on clan commands.")]
@@ -150,7 +156,7 @@ namespace ClansPlugin
 			});
 		}
 
-		internal static Action<CommandArgs> GetCommand(string name)
+		internal static void Execute(string name, CommandArgs args)
 		{
 			var methods = typeof(ClanCommands).GetMethods(BindingFlags.NonPublic | BindingFlags.Static).Where(m => m.GetCustomAttribute(typeof(ClanCommandAttribute)) != null);
 			var attributes = methods.Select(m => (m.GetCustomAttribute(typeof(ClanCommandAttribute)) as ClanCommandAttribute));
@@ -160,14 +166,32 @@ namespace ClansPlugin
 				var attrib = (mi.GetCustomAttribute(typeof(ClanCommandAttribute)) as ClanCommandAttribute);
 
 				if (attrib.Name == name)
-					return (Action<CommandArgs>)Delegate.CreateDelegate(typeof(Action<CommandArgs>), mi);
+				{
+					Action<CommandArgs> action = (Action<CommandArgs>)Delegate.CreateDelegate(typeof(Action<CommandArgs>), mi);
+
+					Member mbr = args.Player.GetMember();
+
+					Rank rank = mbr?.Rank ?? Rank.None;
+
+					if (HasPermission(rank, attrib.Permission))
+						action.Invoke(args);
+					else
+						args.Player.SendErrorMessage("Your rank is not high enough to use this command!");
+					return;
+				}
 			}
-			return null;
+			Execute("help", args);
+		}
+
+		internal static bool HasPermission(Rank rank, Rank required)
+		{
+			return (int)rank >= (int)required;
 		}
 	}
 
 	public class ClanCommandAttribute : Attribute
 	{
+		public Rank Permission;
 		public string Name;
 		public string Parameters;
 		public string Description;
@@ -175,6 +199,7 @@ namespace ClansPlugin
 		public ClanCommandAttribute(string name)
 		{
 			this.Name = name;
+			Permission = Rank.None;
 		}
 	}
 }

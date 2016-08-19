@@ -34,7 +34,7 @@ namespace ClansPlugin
 			Commands.ChatCommands.Add(new Command(((e) => {
 				e.Player.SendInfoMessage("In clan: " + e.Player.IsInClan());
 				e.Player.SendInfoMessage("Is Member: " + (e.Player.GetMember() != null));
-			}), "test"));
+			}), "clantest"));
 
 			PlayerHooks.PlayerPostLogin += PlayerHooks_PlayerPostLogin;
 			PlayerHooks.PlayerLogout += PlayerHooks_PlayerLogout;
@@ -65,16 +65,11 @@ namespace ClansPlugin
 				args.Player.SendErrorMessage("You need to be logged in to use this command!");
 				return;
 			}
-
 			string cmd = args.Parameters.Count > 0 ? args.Parameters[0] : "help";
 			List<string> newargs = args.Parameters.Count == 0 ? args.Parameters : args.Parameters.GetRange(1, args.Parameters.Count - 1);
 			CommandArgs newCmdArgs = new CommandArgs(args.Message.Remove(0, args.Message.IndexOf(' ') + 1), args.Player, newargs);
 
-			var command = ClanCommands.GetCommand(cmd);
-			if (command != null)
-				command.Invoke(newCmdArgs);
-			else
-				ClanCommands.GetCommand("help").Invoke(newCmdArgs);
+			ClanCommands.Execute(cmd, newCmdArgs);
 		}
 
 		protected override void Dispose(bool disposing)

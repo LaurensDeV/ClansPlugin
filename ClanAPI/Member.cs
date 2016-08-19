@@ -13,12 +13,15 @@ namespace ClanAPI
 		[DBColumn("Clan", MySqlDbType.VarChar)]
 		public string Clan { get; set; }
 
-		[DBColumn("Rank", MySqlDbType.Int64)]
+		[DBColumn("Rank", MySqlDbType.Int32)]
 		public Rank Rank { get; set; }
 	}
 
+	//For some reason the database stores Rank as an Int64, 
+	//so we need the enum to be 64bits in order to not crash on Convert.ChangeType
 	public enum Rank : long
 	{
+		None = -1,
 		Recruit,
 		Helper,
 		Moderator,

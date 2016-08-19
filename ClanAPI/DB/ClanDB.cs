@@ -18,8 +18,6 @@ namespace ClanAPI.DB
 	{
 		internal Dictionary<string, Clan> ClanCache;
 		public const string MemberKey = "member";
-		public const string ClanKey = "clan";
-
 		private static IDbConnection connection;
 		private static ClanDB _instance;
 		public static ClanDB Instance
@@ -85,6 +83,7 @@ namespace ClanAPI.DB
 			Member mbr = new Member() { Username = ts.Name, Clan = clan, Rank = (owner ? Rank.Owner : Rank.Recruit) };
 			await InsertObjectInDatabase<Member>(mbr);
 			ts.SetData(MemberKey, mbr);
+			ClanHooks.OnClanJoined(ts.GetClan(), ts);
 		}
 
 		public async Task<bool> AddClan(TSPlayer ts, string name)
@@ -126,7 +125,6 @@ namespace ClanAPI.DB
 					sb.Append("VALUES (");
 					sb.Append(string.Join(", ", values.Select((v, i) => $"@{i}")));
 					sb.Append(")");
-					Console.WriteLine(sb.ToString());
 					connection.Query(sb.ToString(), values);
 				}
 				catch (Exception ex) { TShock.Log.Error(ex.ToString()); }
