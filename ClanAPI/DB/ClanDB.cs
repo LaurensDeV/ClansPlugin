@@ -1,4 +1,5 @@
-﻿using Mono.Data.Sqlite;
+﻿using ClanAPI.Hooks;
+using Mono.Data.Sqlite;
 using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
@@ -59,6 +60,8 @@ namespace ClanAPI.DB
 
 			EnsureTableStructure<Clan>();
 			EnsureTableStructure<Member>();
+
+			LoadClans();
 		}
 
 		public void UnLoadMember(TSPlayer ts)
@@ -73,25 +76,29 @@ namespace ClanAPI.DB
 		public async void LoadMember(TSPlayer ts)
 		{
 			Member mbr = await GetObjectFromDatabase<Member>("SELECT * FROM Members WHERE Username = @0", ts.Name);
-			if (mbr == null)
-			{
-				mbr = new Member() { Username = ts.Name };
-				await InsertObjectInDatabase<Member>(mbr);
-			}
+			if (mbr != null)
+				ts.SetData(MemberKey, mbr);
+		}
+
+		public async void AddMember(TSPlayer ts, string clan, bool owner = false)
+		{
+			Member mbr = new Member() { Username = ts.Name, Clan = clan, Rank = (owner ? Rank.Owner : Rank.Recruit) };
+			await InsertObjectInDatabase<Member>(mbr);
 			ts.SetData(MemberKey, mbr);
 		}
 
-		public async void AddClan(TSPlayer ts, string name)
+		public async Task<bool> AddClan(TSPlayer ts, string name)
 		{
 			Clan clan = await GetObjectFromDatabase<Clan>("SELECT * FROM Clans WHERE Name = @0", name);
 			if (clan != null)
-			{
-				ts.SendErrorMessage("A clan with this name already exists!");
-				return;
-			}
+				return false;
+
 			clan = new Clan(name);
 			await InsertObjectInDatabase<Clan>(clan);
 			ClanCache.Add(clan.Name, clan);
+			AddMember(ts, name, true);
+			ClanHooks.OnClanCreated(clan, ts);
+			return true;
 		}
 
 		public async void LoadClans()
@@ -106,18 +113,23 @@ namespace ClanAPI.DB
 		{
 			await Task.Run(() =>
 			{
-				var tableName = (typeof(T).GetCustomAttribute(typeof(DBTableAttribute)) as DBTableAttribute).TableName;
-				var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
-				var values = properties.Select(f => f.GetValue(obj)).ToArray();
+				try
+				{
+					var tableName = (typeof(T).GetCustomAttribute(typeof(DBTableAttribute)) as DBTableAttribute).TableName;
+					var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
+					var values = properties.Select(f => f.GetValue(obj)).ToArray();
 
-				StringBuilder sb = new StringBuilder("INSERT INTO ");
-				sb.Append(tableName).Append(" (");
-				string names = string.Join(", ", properties.Select(f => (f.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute).Name));
-				sb.Append(names).Append(") ");
-				sb.Append("VALUES (");
-				sb.Append(string.Join(", ", values.Select((v, i) => $"@{i}")));
-				sb.Append(")");
-				connection.Query(sb.ToString(), values);
+					StringBuilder sb = new StringBuilder("INSERT INTO ");
+					sb.Append(tableName).Append(" (");
+					string names = string.Join(", ", properties.Select(f => (f.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute).Name));
+					sb.Append(names).Append(") ");
+					sb.Append("VALUES (");
+					sb.Append(string.Join(", ", values.Select((v, i) => $"@{i}")));
+					sb.Append(")");
+					Console.WriteLine(sb.ToString());
+					connection.Query(sb.ToString(), values);
+				}
+				catch (Exception ex) { TShock.Log.Error(ex.ToString()); }
 			});
 		}
 
@@ -126,24 +138,30 @@ namespace ClanAPI.DB
 			List<T> results = new List<T>();
 			return Task.Run<T[]>(() =>
 			{
-				var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
-
-				using (QueryResult reader = connection.QueryReader(query, args))
+				try
 				{
-					while (reader.Read())
+					var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
+
+					using (QueryResult reader = connection.QueryReader(query, args))
 					{
-						foreach (var info in properties)
+						while (reader.Read())
 						{
+							if (typeof(T).GetConstructor(Type.EmptyTypes) == null)
+								throw new Exception($"{typeof(T)} has no parameterless constructor!");
+
 							var instance = (T)Activator.CreateInstance(typeof(T));
-							var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
-							object value = reader.Get<object>(attrib.Name);
-							instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
+							foreach (var info in properties)
+							{
+								var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
+								object value = reader.Get<object>(attrib.Name);
+								instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
+							}
 							results.Add(instance);
 						}
-						
 					}
-					return results.ToArray();
 				}
+				catch (Exception ex) { TShock.Log.Error(ex.ToString()); }
+				return results.ToArray();
 			});
 		}
 
@@ -151,45 +169,53 @@ namespace ClanAPI.DB
 		{
 			return Task.Run<T>(() =>
 			{
-				var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
-				var instance = (T)Activator.CreateInstance(typeof(T));
-				using (QueryResult reader = connection.QueryReader(query, args))
+				try
 				{
-					if (reader.Read())
+					var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
+					var instance = (T)Activator.CreateInstance(typeof(T));
+					using (QueryResult reader = connection.QueryReader(query, args))
 					{
-						foreach (var info in properties)
+						if (reader.Read())
 						{
-							var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
-							object value = reader.Get<object>(attrib.Name);
-							instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
+							foreach (var info in properties)
+							{
+								var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
+								object value = reader.Get<object>(attrib.Name);
+								instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
+							}
+							return instance;
 						}
-						return instance;
 					}
 				}
+				catch (Exception ex) { TShock.Log.Error(ex.ToString()); }
 				return default(T);
 			});
 		}
 
 		public void EnsureTableStructure<T>() where T : class
 		{
-			var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
-
-			if (properties.Count() == 0)
-				throw new Exception($"{typeof(T)} has no public properties.");
-
-			List<SqlColumn> columns = new List<SqlColumn>();
-
-			foreach (var info in properties)
+			try
 			{
-				var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
-				columns.Add(attrib.GetColumn());
+				var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
+
+				if (properties.Count() == 0)
+					throw new Exception($"{typeof(T)} has no public properties.");
+
+				List<SqlColumn> columns = new List<SqlColumn>();
+
+				foreach (var info in properties)
+				{
+					var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
+					columns.Add(attrib.GetColumn());
+				}
+
+				SqlTableCreator sqlcreator = new SqlTableCreator(connection, connection.GetSqlType() == SqlType.Sqlite ? (IQueryBuilder)new SqliteQueryCreator() : new MysqlQueryCreator());
+
+				var tableName = (typeof(T).GetCustomAttribute(typeof(DBTableAttribute)) as DBTableAttribute).TableName;
+
+				sqlcreator.EnsureTableStructure(new SqlTable(tableName, columns.ToArray()));
 			}
-
-			SqlTableCreator sqlcreator = new SqlTableCreator(connection, connection.GetSqlType() == SqlType.Sqlite ? (IQueryBuilder)new SqliteQueryCreator() : new MysqlQueryCreator());
-
-			var tableName = (typeof(T).GetCustomAttribute(typeof(DBTableAttribute)) as DBTableAttribute).TableName;
-
-			sqlcreator.EnsureTableStructure(new SqlTable(tableName, columns.ToArray()));
+			catch (Exception ex) { TShock.Log.Error(ex.ToString()); }
 		}
 	}
 

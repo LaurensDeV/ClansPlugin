@@ -57,9 +57,9 @@ namespace ClanAPI.Hooks
 		/// Invokes the ClanCreated event.
 		/// </summary>
 		/// <param name="clan">The <see cref="Clan"/> that has been created.</param>
-		public static void OnClanCreated(Clan clan)
+		public static void OnClanCreated(Clan clan, TSPlayer ts)
 		{
-			ClanCreated?.Invoke(new ClanCreatedEventArgs(clan));
+			ClanCreated?.Invoke(new ClanCreatedEventArgs(clan,ts));
 		}
 
 		/// <summary>
@@ -104,12 +104,17 @@ namespace ClanAPI.Hooks
 		public Clan Clan { get; private set; }
 
 		/// <summary>
+		/// The <see cref="TSPlayer"/> that has created the clan.
+		/// </summary>
+		public TSPlayer Player { get; private set; }
+		/// <summary>
 		/// Intializes a new instance of the <see cref="ClanCreatedEventArgs"/> class.
 		/// </summary>
 		/// <param name="clan">The <see cref="Clan"/> that has been created.</param>
-		public ClanCreatedEventArgs(Clan clan)
+		public ClanCreatedEventArgs(Clan clan, TSPlayer ts)
 		{
 			Clan = clan;
+			Player = ts;
 		}
 	}
 

@@ -1,6 +1,9 @@
 ﻿using ClanAPI.DB;
 using MySql.Data.MySqlClient;
+using System;
 using TShockAPI;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace ClanAPI
 {
@@ -24,6 +27,17 @@ namespace ClanAPI
 		[DBColumn("ChatColor", MySqlDbType.VarChar)]
 		public string ChatColor { get; set; }
 
+		[DBColumn("Ranks", MySqlDbType.VarChar)]
+		public string Ranks
+		{
+			get { return JsonConvert.SerializeObject(RankNames); }
+			set { RankNames = JsonConvert.DeserializeObject<string[]>(value); }
+		}
+
+		public string[] RankNames { get; set; }
+
+		public Clan() { }
+
 		public Clan(string name)
 		{
 			Name = name;
@@ -31,13 +45,21 @@ namespace ClanAPI
 			Suffix = "";
 			Prefix = "";
 			ChatColor = DefaultChatColor;
+			RankNames = new string[]
+			{
+				"(Recruit)",
+				"(Helper)",
+				"(Moderator)",
+				"(Admin)",
+				"(Owner)"
+			};
 		}
 
 		public void SendMessage(string msg, params string[] args)
 		{
 			foreach (TSPlayer ts in TShock.Players)
 			{
-				if (ts.GetClan() != this)
+				if (ts == null || ts.GetClan() != this)
 					continue;
 
 				ts.SendMessage(string.Format(msg, args), ChatColor.Parse());

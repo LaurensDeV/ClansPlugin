@@ -10,6 +10,7 @@ using TShockAPI;
 using ClanAPI;
 using ClanAPI.DB;
 using TShockAPI.Hooks;
+using ClanAPI.Hooks;
 
 namespace ClansPlugin
 {
@@ -24,13 +25,27 @@ namespace ClansPlugin
 
 		public override void Initialize()
 		{
+#pragma warning disable
 			ClanDB.Instance.Initialize();
 
 			Commands.ChatCommands.Add(new Command(ClanCommand, "clan"));
 			Commands.ChatCommands.Add(new Command(ClanCommands.CSayCommand, "c"));
 
+			Commands.ChatCommands.Add(new Command(((e) => {
+				e.Player.SendInfoMessage("In clan: " + e.Player.IsInClan());
+				e.Player.SendInfoMessage("Is Member: " + (e.Player.GetMember() != null));
+			}), "test"));
+
 			PlayerHooks.PlayerPostLogin += PlayerHooks_PlayerPostLogin;
 			PlayerHooks.PlayerLogout += PlayerHooks_PlayerLogout;
+
+
+			ClanHooks.ClanCreated += ClanHooks_ClanCreated;
+		}
+
+		private void ClanHooks_ClanCreated(ClanCreatedEventArgs args)
+		{
+			TSPlayer.All.SendInfoMessage($"A new clan ({args.Clan.Name}) has been created by {args.Player.Name}!");
 		}
 
 		private void PlayerHooks_PlayerPostLogin(PlayerPostLoginEventArgs e)
@@ -69,7 +84,7 @@ namespace ClansPlugin
 
 		public ClanMain(Main game) : base(game)
 		{
-			Order = 0;
+			Order = 1;
 		}
 	}
 }

@@ -6,11 +6,38 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using TShockAPI;
+using ClanAPI.DB;
 
 namespace ClansPlugin
 {
 	public class ClanCommands
 	{
+		[ClanCommand("create", Parameters = "<name>", Description = "Create a clan.")]
+		internal static void CreateCommand(CommandArgs args)
+		{
+			//Permission check
+			if (args.Parameters.Count < 1)
+			{
+				args.Player.SendErrorMessage($"Invalid syntax! Proper syntax: {Commands.Specifier}clan create <name>");
+				return;
+			}
+			if (args.Player.IsInClan())
+			{
+				args.Player.SendErrorMessage("You are already in a clan!");
+				return;
+			}
+			string clanName = string.Join(" ", args.Parameters);
+			//max length check;
+
+			Task.Run(async() =>
+			{
+				if (await ClanDB.Instance.AddClan(args.Player, clanName))
+					args.Player.SendInfoMessage("Your clan was created successfully.");
+				else
+					args.Player.SendErrorMessage("A clan with this name already exists.");
+			});
+		}
+
 		[ClanCommand("motd", Parameters = "[new motd]", Description = "Gets or sets the clan's MotD.")]
 		internal static void MotdCommand(CommandArgs args)
 		{
@@ -87,7 +114,7 @@ namespace ClansPlugin
 		internal static void CSayCommand(CommandArgs args)
 		{
 			Clan clan = args.Player.GetClan();
-			if (clan == null)
+			if (!args.Player.IsInClan())
 			{
 				args.Player.SendErrorMessage("You are not in a clan!");
 				return;
@@ -103,7 +130,7 @@ namespace ClansPlugin
 				return;
 			}
 			string message = string.Join(" ", args.Parameters);
-			args.Player.GetClan().SendMessage("{clans - {0}} {1}: {2}", clan.Name, args.Player.Name, message);
+			clan.SendMessage("{{clans - {0}}} {1} {2}: {3}", clan.Name, clan.RankNames[(int)args.Player.GetMember().Rank],args.Player.Name, message);
 		}
 
 		[ClanCommand("help", Description = "gives info on clan commands.")]

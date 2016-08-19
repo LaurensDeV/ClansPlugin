@@ -12,15 +12,17 @@ namespace ClanAPI
 
 		[DBColumn("Clan", MySqlDbType.VarChar)]
 		public string Clan { get; set; }
+
+		[DBColumn("Rank", MySqlDbType.Int64)]
+		public Rank Rank { get; set; }
 	}
 
-	[Flags]
-	public enum Rank : int
+	public enum Rank : long
 	{
-		Owner = 0x10,
-		Admin = 0x8,
-		Moderator = 0x4,
-		Helper = 0x2,
-		Recruit = 0x0
+		Recruit,
+		Helper,
+		Moderator,
+		Admin,
+		Owner
 	}
 }
