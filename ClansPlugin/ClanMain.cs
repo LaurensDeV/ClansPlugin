@@ -31,9 +31,16 @@ namespace ClansPlugin
 			Commands.ChatCommands.Add(new Command(ClanCommand, "clan"));
 			Commands.ChatCommands.Add(new Command(ClanCommands.CSayCommand, "c"));
 
-			Commands.ChatCommands.Add(new Command(((e) => {
+			Commands.ChatCommands.Add(new Command(((e) =>
+			{
 				e.Player.SendInfoMessage("In clan: " + e.Player.IsInClan());
 				e.Player.SendInfoMessage("Is Member: " + (e.Player.GetMember() != null));
+
+				if (e.Player.IsInClan())
+				{
+					e.Player.GetClan().SetMotd("We are a lovely clan, you are a cunt :D");
+				}
+
 			}), "clantest"));
 
 			PlayerHooks.PlayerPostLogin += PlayerHooks_PlayerPostLogin;
@@ -41,6 +48,26 @@ namespace ClansPlugin
 
 
 			ClanHooks.ClanCreated += ClanHooks_ClanCreated;
+			ClanHooks.ClanDisbanded += ClanHooks_ClanDisbanded;
+			ClanHooks.ClanLeft += ClanHooks_ClanLeft;
+			ClanHooks.ClanJoined += ClanHooks_ClanJoined;
+		}
+
+		private void ClanHooks_ClanJoined(ClanJoinedEventArgs args)
+		{
+			args.Clan.SendMessage("{0} has joined the clan!", args.Player.Name);
+			if (!string.IsNullOrEmpty(args.Clan.Motd))
+				args.Player.SendInfoMessage($"[Clan Motd] - {args.Clan.Motd}");
+		}
+
+		private void ClanHooks_ClanLeft(ClanLeftEventArgs args)
+		{
+			args.Clan.SendMessage("{0} has left the clan!", args.Player.Name);
+		}
+
+		private void ClanHooks_ClanDisbanded(ClanDisbandedEventArgs args)
+		{
+			TSPlayer.All.SendInfoMessage($"Clan {args.Clan.Name} has been disbanded!");
 		}
 
 		private void ClanHooks_ClanCreated(ClanCreatedEventArgs args)
@@ -51,6 +78,10 @@ namespace ClansPlugin
 		private void PlayerHooks_PlayerPostLogin(PlayerPostLoginEventArgs e)
 		{
 			ClanDB.Instance.LoadMember(e.Player);
+			Clan clan = e.Player.GetClan();
+
+			if (clan != null && !string.IsNullOrEmpty(clan.Motd))
+				e.Player.SendInfoMessage($"[Clan Motd] - {e.Player.GetClan().Motd}");
 		}
 
 		private void PlayerHooks_PlayerLogout(PlayerLogoutEventArgs e)

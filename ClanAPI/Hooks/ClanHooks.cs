@@ -57,7 +57,7 @@ namespace ClanAPI.Hooks
 		/// Invokes the ClanCreated event.
 		/// </summary>
 		/// <param name="clan">The <see cref="Clan"/> that has been created.</param>
-		public static void OnClanCreated(Clan clan, TSPlayer ts)
+		internal static void OnClanCreated(Clan clan, TSPlayer ts)
 		{
 			ClanCreated?.Invoke(new ClanCreatedEventArgs(clan,ts));
 		}
@@ -66,7 +66,7 @@ namespace ClanAPI.Hooks
 		/// Invokes the ClanDisbanded event.
 		/// </summary>
 		/// <param name="clan">The <see cref="Clan"/> that has been disbanded.</param>
-		public static void OnClanDisbanded(Clan clan)
+		internal static void OnClanDisbanded(Clan clan)
 		{
 			ClanDisbanded?.Invoke(new ClanDisbandedEventArgs(clan));
 		}
@@ -76,7 +76,7 @@ namespace ClanAPI.Hooks
 		/// </summary>
 		/// <param name="clan">The <see cref="Clan"/> that the player joined.</param>
 		/// <param name="player">The <see cref="ClanMember"/> who joined the clan.</param>
-		public static void OnClanJoined(Clan clan, TSPlayer player)
+		internal static void OnClanJoined(Clan clan, TSPlayer player)
 		{
 			ClanJoined?.Invoke(new ClanJoinedEventArgs(clan, player));
 		}
@@ -87,7 +87,7 @@ namespace ClanAPI.Hooks
 		/// <param name="clan">The <see cref="ClanMember"/> that the player left.</param>
 		/// <param name="player">The <see cref="ClanMember"/> who left the clan.</param>
 		/// <param name="kick">Whether the player was kicked or not.</param>
-		public static void OnClanLeft(Clan clan, TSPlayer player, bool kick)
+		internal static void OnClanLeft(Clan clan, TSPlayer player, bool kick)
 		{
 			ClanLeft?.Invoke(new ClanLeftEventArgs(clan, player, kick));
 		}

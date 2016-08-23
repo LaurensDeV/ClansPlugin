@@ -37,15 +37,17 @@ namespace ClanAPI
 			return null;
 		}
 
-		public static Color Parse(this string colorString)
+		public static bool ParseColor(string colorString, out Color color)
 		{
-			byte[] rgb = new byte[3];
+			color = Color.White;
+			byte r, g, b;
 			string[] split = colorString.Split(',');
 
-			if (split.Length != 3 || !byte.TryParse(split[0], out rgb[0]) || !byte.TryParse(split[1], out rgb[1]) || !byte.TryParse(split[2], out rgb[2]))
-				throw new Exception($"Error parsing color \"{colorString}\", required format: \"255,255,255\".");
+			if (split.Length != 3 || !byte.TryParse(split[0], out r) || !byte.TryParse(split[1], out g) || !byte.TryParse(split[2], out b))
+				return false;
 
-			return new Color(rgb[0], rgb[1], rgb[2]);
+			color = new Color(r,g,b);
+			return true;
 		}
 	}
 }

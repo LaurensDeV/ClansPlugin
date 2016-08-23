@@ -19,6 +19,8 @@ namespace ClanAPI.DB
 		internal Dictionary<string, Clan> ClanCache;
 		public const string MemberKey = "member";
 		private static IDbConnection connection;
+
+
 		private static ClanDB _instance;
 		public static ClanDB Instance
 		{
@@ -62,9 +64,84 @@ namespace ClanAPI.DB
 			LoadClans();
 		}
 
+		public IReadOnlyCollection<Clan> Clans => ClanCache.Values.ToArray();
+
+		public int Query(string query, params object[] args)
+		{
+			return connection.Query(query, args);
+		}
+
+		public QueryResult QueryReader(string query, params object[] args)
+		{
+			return connection.QueryReader(query, args);
+		}
+
+		internal void SetPrefix(Clan clan, string prefix)
+		{
+			Task.Run(() =>
+			{
+				connection.Query("UPDATE Clans SET Prefix = @0 WHERE Name = @1", prefix, clan.Name);
+			});
+		}
+
+		internal void SetMotd(Clan clan, string motd)
+		{
+			Task.Run(() =>
+			{
+				connection.Query("UPDATE Clans SET Motd = @0 WHERE Name = @1", motd, clan.Name);
+			});
+		}
+
+		internal void SetChatColor(Clan clan, string chatColor)
+		{
+			Task.Run(() =>
+			{
+				connection.Query("UPDATE Clans SET ChatColor = @0 WHERE Name = @1", chatColor, clan.Name);
+			});
+		}
+
+		internal void SetDescription(Clan clan, string description)
+		{
+			Task.Run(() =>
+			{
+				connection.Query("UPDATE Clans SET Description = @0 WHERE Name = @1", description, clan.Name);
+			});
+		}
+
+		internal void SetSuffix(Clan clan, string suffix)
+		{
+			Task.Run(() =>
+			{
+				connection.Query("UPDATE Clans SET Suffix = @0 WHERE Name = @1", suffix, clan.Name);
+			});
+		}
+
+		internal void SetName(Clan clan, string name)
+		{
+			Task.Run(() =>
+			{
+				connection.Query("UPDATE Clans SET Name = @0 WHERE Name = @1", name, clan.Name);
+			});
+		}
+
 		public void UnLoadMember(TSPlayer ts)
 		{
 			ts.RemoveData(MemberKey);
+		}
+
+		public async void RemoveClan(TSPlayer player, Clan clan)
+		{
+			await Task.Run(() =>
+			{
+				connection.Query("DELETE FROM Members WHERE Clan = @0", clan.Name);
+				connection.Query("DELETE FROM Clans WHERE Name = @0", clan.Name);
+				foreach (TSPlayer ts in TShock.Players)
+				{
+					UnLoadMember(ts);
+					ClanHooks.OnClanLeft(clan, player, false);
+				}
+				ClanCache.Remove(clan.Name);
+			});
 		}
 
 		/// <summary>
@@ -76,6 +153,14 @@ namespace ClanAPI.DB
 			Member mbr = await GetObjectFromDatabase<Member>("SELECT * FROM Members WHERE Username = @0", ts.Name);
 			if (mbr != null)
 				ts.SetData(MemberKey, mbr);
+		}
+
+		public async void RemoveMember(TSPlayer ts)
+		{
+			await Task.Run(() =>
+			{
+
+			});
 		}
 
 		public async void AddMember(TSPlayer ts, string clan, bool owner = false)
@@ -139,20 +224,19 @@ namespace ClanAPI.DB
 				try
 				{
 					var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(f => f.GetCustomAttribute(typeof(DBColumnAttribute)) != null);
-
 					using (QueryResult reader = connection.QueryReader(query, args))
 					{
 						while (reader.Read())
 						{
 							if (typeof(T).GetConstructor(Type.EmptyTypes) == null)
 								throw new Exception($"{typeof(T)} has no parameterless constructor!");
-
 							var instance = (T)Activator.CreateInstance(typeof(T));
 							foreach (var info in properties)
 							{
 								var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
 								object value = reader.Get<object>(attrib.Name);
-								instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
+
+								instance.GetType().GetProperty(info.Name).SetValue(instance, value);
 							}
 							results.Add(instance);
 						}
@@ -179,7 +263,7 @@ namespace ClanAPI.DB
 							{
 								var attrib = (info.GetCustomAttribute(typeof(DBColumnAttribute)) as DBColumnAttribute);
 								object value = reader.Get<object>(attrib.Name);
-								instance.GetType().GetProperty(attrib.Name).SetValue(instance, value);
+								instance.GetType().GetProperty(info.Name).SetValue(instance, value);
 							}
 							return instance;
 						}

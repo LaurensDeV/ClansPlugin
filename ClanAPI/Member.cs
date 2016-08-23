@@ -15,6 +15,8 @@ namespace ClanAPI
 
 		[DBColumn("Rank", MySqlDbType.Int32)]
 		public Rank Rank { get; set; }
+
+		public bool Muted { get; set; }
 	}
 
 	//For some reason the database stores Rank as an Int64, 
