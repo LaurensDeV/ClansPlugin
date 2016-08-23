@@ -27,7 +27,7 @@ namespace ClansPlugin
 			}
 			if (args.Player.IsInClan())
 			{
-				args.Player.SendErrorMessage("You are already in a clan!");
+				args.Player.SendErrorMessage("You are already in a clan.");
 				return;
 			}
 			string clanName = string.Join(" ", args.Parameters);
@@ -79,7 +79,7 @@ namespace ClansPlugin
 			}
 			Clan clan = args.Player.GetClan();
 			clan.SetMotd(motd);
-			args.Player.GetClan().SendMessage("{0} changed the motd to {1}", args.Player.Name, motd);
+			args.Player.GetClan().SendMessage("{0} changed the clan's motd to \"{1}\"", args.Player.Name, motd);
 		}
 
 		[ClanCommand("prefix", Parameters = "[new prefix]", Description = "Gets or sets your clan's prefix.", Permission = Rank.Owner)]
@@ -99,11 +99,32 @@ namespace ClansPlugin
 			}
 			if (prefix.Length == 0)
 			{
-				args.Player.SendErrorMessage("The prefix cannot be empty!");
+				args.Player.SendErrorMessage("The prefix cannot be empty.");
+				return;
 			}
 			Clan clan = args.Player.GetClan();
 			clan.SetPrefix(prefix);
-			args.Player.GetClan().SendMessage("{0} changed the prefix to {1}", args.Player.Name, prefix);
+			args.Player.GetClan().SendMessage("{0} changed the clan's prefix to \"{1}\"", args.Player.Name, prefix);
+		}
+
+		[ClanCommand("suffix", Parameters = "[new prefix]", Description = "Gets or sets your clan's suffix.", Permission = Rank.Owner)]
+		internal static void SuffixCommand(CommandArgs args)
+		{
+			if (args.Parameters.Count == 0)
+			{
+				args.Player.SendInfoMessage($"The current suffix is: \"{args.Player.GetClan().Suffix}\".");
+				args.Player.SendInfoMessage($"Type {Commands.Specifier}clan suffix [new suffix] to change the suffix");
+				return;
+			}
+			string suffix = string.Join(" ", args.Parameters);
+			if (suffix.Length > 30)
+			{
+				args.Player.SendErrorMessage("The suffix cannot be longer than 30 characters.");
+				return;
+			}
+			Clan clan = args.Player.GetClan();
+			clan.SetSuffix(suffix);
+			args.Player.GetClan().SendMessage("{0} changed the clan's suffix to \"{1}\"", args.Player.Name, suffix);
 		}
 
 		[ClanCommand("color", Parameters = "[new color (255,255,255)]", Description = "Gets or sets your clan's chatcolor.", Permission = Rank.Owner)]
@@ -123,43 +144,236 @@ namespace ClansPlugin
 			}
 			Clan clan = args.Player.GetClan();
 			clan.SetChatColor(color);
-			args.Player.GetClan().SendMessage("{0} changed the chatcolor to {1}", args.Player.Name, color);
+			args.Player.GetClan().SendMessage("{0} changed the clan's chatcolor to \"{1}\"", args.Player.Name, color);
 		}
 
 		[ClanCommand("promote", Parameters = "<player>", Description = "Promotes a player in your clan.", Permission = Rank.Owner)]
 		internal static void PromoteCommand(CommandArgs args)
 		{
-			throw new NotImplementedException();
+			if (args.Parameters.Count == 0)
+			{
+				args.Player.SendErrorMessage($"Invalid sytnax! proper sytax: {Commands.Specifier}clan demote <player>");
+				return;
+			}
+			string PlrStr = string.Join(" ", args.Parameters);
+			var plrs = TShock.Utils.FindPlayer(PlrStr);
+			if (plrs.Count == 0)
+			{
+				args.Player.SendErrorMessage("No players matched your search.");
+				return;
+			}
+			if (plrs.Count > 1)
+			{
+				TShock.Utils.SendMultipleMatchError(args.Player, plrs.Select(p => p.Name));
+				return;
+			}
+			var plr = plrs[0];
+			if (plr == args.Player)
+			{
+				args.Player.SendErrorMessage("You cannot promote yourself!");
+				return;
+			}
+			if (plr.GetClan() != args.Player.GetClan())
+			{
+				args.Player.SendErrorMessage("This player is not in the same clan as you!");
+				return;
+			}
+			Member mbr = plr.GetMember();
+			if (mbr.Rank >= Rank.Owner)
+			{
+				args.Player.SendErrorMessage("This player is already the highest possible rank.");
+				return;
+			}
+			Clan clan = args.Player.GetClan();
+			mbr.SetRank(mbr.Rank + 1);
+			string newRank = clan.RankNames[(int)mbr.Rank];
+			clan.SendMessage("{0} has been promoted to {1}", plr.Name, newRank);
 		}
 
 		[ClanCommand("demote", Parameters = "<player>", Description = "Demotes a player in your clan.", Permission = Rank.Owner)]
 		internal static void DemoteCommand(CommandArgs args)
 		{
-			throw new NotImplementedException();
+			if (args.Parameters.Count == 0)
+			{
+				args.Player.SendErrorMessage($"Invalid sytnax! proper sytax: {Commands.Specifier}clan demote <player>");
+				return;
+			}
+			string PlrStr = string.Join(" ", args.Parameters);
+			var plrs = TShock.Utils.FindPlayer(PlrStr);
+			if (plrs.Count == 0)
+			{
+				args.Player.SendErrorMessage("No players matched your search.");
+				return;
+			}
+			if (plrs.Count > 1)
+			{
+				TShock.Utils.SendMultipleMatchError(args.Player, plrs.Select(p => p.Name));
+				return;
+			}
+			var plr = plrs[0];
+			if (plr == args.Player)
+			{
+				args.Player.SendErrorMessage("You cannot demote yourself!");
+				return;
+			}
+			if (plr.GetClan() != args.Player.GetClan())
+			{
+				args.Player.SendErrorMessage("This player is not in the same clan as you!");
+				return;
+			}
+			Member mbr = plr.GetMember();
+			if (mbr.Rank == 0)
+			{
+				args.Player.SendErrorMessage("This player is already the lowest possible rank.");
+				return;
+			}
+			Clan clan = args.Player.GetClan();
+			mbr.SetRank(mbr.Rank - 1);
+			string newRank = clan.RankNames[(int)mbr.Rank];
+			clan.SendMessage("{0} has been demoted to {1}", plr.Name, newRank);
 		}
 
-		[ClanCommand("kick", Parameters = "<player> [reason]", Description = "Kicks a player from your clan.", Permission = Rank.Admin)]
+		[ClanCommand("kick", Parameters = "<player>", Description = "Kicks a player from your clan.", Permission = Rank.Admin)]
 		internal static void KickCommand(CommandArgs args)
 		{
-			throw new NotImplementedException();
+			if (args.Parameters.Count == 0)
+			{
+				args.Player.SendErrorMessage($"Invalid sytnax! proper sytax: {Commands.Specifier}clan kick <player>");
+				return;
+			}
+			string PlrStr = string.Join(" ", args.Parameters);
+			var plrs = TShock.Utils.FindPlayer(PlrStr);
+			if (plrs.Count == 0)
+			{
+				args.Player.SendErrorMessage("No players matched your search.");
+				return;
+			}
+			if (plrs.Count > 1)
+			{
+				TShock.Utils.SendMultipleMatchError(args.Player, plrs.Select(p => p.Name));
+				return;
+			}
+			var plr = plrs[0];
+			if (plr == args.Player)
+			{
+				args.Player.SendErrorMessage("You cannot kick yourself!");
+				return;
+			}
+			if (plr.GetClan() != args.Player.GetClan())
+			{
+				args.Player.SendErrorMessage("This player is not in the same clan as you!");
+				return;
+			}
+			if (plr.GetMember().Rank > args.Player.GetMember().Rank)
+			{
+				args.Player.SendErrorMessage("You cannot kick someone with a higher rank than you.");
+				return;
+			}
+			ClanDB.Instance.RemoveMember(plr, true);
 		}
 
-		[ClanCommand("mute", Parameters = "<player> [reason]", Description = "Mute a player in the clan.", Permission = Rank.Moderator)]
+		[ClanCommand("mute", Parameters = "<player> [reason]", Description = "Mute/unmute a player in the clan.", Permission = Rank.Moderator)]
 		internal static void MuteCommand(CommandArgs args)
 		{
-			throw new NotImplementedException();
+			if (args.Parameters.Count == 0)
+			{
+				args.Player.SendErrorMessage($"Invalid sytnax! proper sytax: {Commands.Specifier}clan mute <player>");
+				return;
+			}
+			string PlrStr = string.Join(" ", args.Parameters);
+			var plrs = TShock.Utils.FindPlayer(PlrStr);
+			if (plrs.Count == 0)
+			{
+				args.Player.SendErrorMessage("No players matched your search.");
+				return;
+			}
+			if (plrs.Count > 1)
+			{
+				TShock.Utils.SendMultipleMatchError(args.Player, plrs.Select(p => p.Name));
+				return;
+			}
+			var plr = plrs[0];
+			if (plr == args.Player)
+			{
+				args.Player.SendErrorMessage("You cannot mute yourself!");
+				return;
+			}
+			if (plr.GetClan() != args.Player.GetClan())
+			{
+				args.Player.SendErrorMessage("This player is not in the same clan as you!");
+				return;
+			}
+			if (plr.GetMember().Rank > args.Player.GetMember().Rank)
+			{
+				args.Player.SendErrorMessage("You cannot mute someone with a higher rank than you.");
+				return;
+			}
+			var muted = (plr.GetMember().Muted = !plr.GetMember().Muted);
+			args.Player.SendInfoMessage($"You have {(muted ? "": "un")}muted {plr.Name} from the clan.");
+			plr.SendInfoMessage($"You have been {(muted ? "": "un")}muted from your clan!");
 		}
 
 		[ClanCommand("leave", Description = "Leave your current clan.", Permission = Rank.Recruit)]
 		internal static void LeaveCommand(CommandArgs args)
 		{
-			throw new NotImplementedException();
+			ClanDB.Instance.RemoveMember(args.Player, false);
 		}
 
 		[ClanCommand("invite", Parameters = "<player>", Description = "Invite a player to your clan.", Permission = Rank.Helper)]
 		internal static void InviteCommand(CommandArgs args)
 		{
-			throw new NotImplementedException();
+			if (args.Parameters.Count == 0)
+			{
+				args.Player.SendErrorMessage($"Invalid sytnax! proper sytax: {Commands.Specifier}clan invite <player>");
+				return;
+			}
+			string PlrStr = string.Join(" ", args.Parameters);
+			var plrs = TShock.Utils.FindPlayer(PlrStr);
+			if (plrs.Count == 0)
+			{
+				args.Player.SendErrorMessage("No players matched your search.");
+				return;
+			}
+			if (plrs.Count > 1)
+			{
+				TShock.Utils.SendMultipleMatchError(args.Player, plrs.Select(p => p.Name));
+				return;
+			}
+			var plr = plrs[0];
+			if (plr == args.Player)
+			{
+				args.Player.SendErrorMessage("You cannot invite yourself!");
+				return;
+			}
+			if (plr.GetClan() != null)
+			{
+				args.Player.SendErrorMessage("You cannot invite someone that is already in a clan!");
+				return;
+			}
+			if (!string.IsNullOrEmpty(plr.GetData<string>("invite")))
+			{
+				args.Player.SendErrorMessage("This player has already been invited to a clan!");
+				return;
+			}
+			Clan clan = args.Player.GetClan();
+			plr.SetData("invite", clan.Name);
+			args.Player.SendInfoMessage($"You have invited {plr.Name} to join your clan!");
+			plr.SendInfoMessage($"You have been invited to join clan {clan.Name}.");
+			plr.SendInfoMessage($"type \"{Commands.Specifier}clan accept\" to accept the invitation.");
+			plr.SendInfoMessage($"type \"{Commands.Specifier}clan deny\" to deny the invitation.");
+		}
+
+		[ClanCommand("deny", Description = "Deny your current clan invitation.")]
+		internal static void DenyCommand(CommandArgs args)
+		{
+			string clan = args.Player.GetData<string>("invite");
+
+			if (string.IsNullOrWhiteSpace(clan))
+			{
+				args.Player.SendErrorMessage("You do not have a pending clan invite!");
+				return;
+			}
+			args.Player.RemoveData("invite");
 		}
 
 		[ClanCommand("accept", Description = "Accept your current clan invitation.")]
@@ -172,6 +386,7 @@ namespace ClansPlugin
 				args.Player.SendErrorMessage("You do not have a pending clan invite!");
 				return;
 			}
+			args.Player.RemoveData("invite");
 			ClanDB.Instance.AddMember(args.Player, clan);
 		}
 
@@ -190,7 +405,8 @@ namespace ClansPlugin
 
 			PaginationTools.SendPage(args.Player, pageNum, PaginationTools.BuildLinesFromTerms(
 				ClanDB.Instance.Clans,
-				(o) => {
+				(o) =>
+				{
 					var clan = (Clan)o;
 					var msg = $"{clan.Name} - {clan.Description}";
 					msg += msg.Length < 80 ? new string(' ', 80 - msg.Length) : "";
@@ -279,7 +495,7 @@ namespace ClansPlugin
 					return;
 				}
 			}
-			Execute("help", args);
+			Execute("help", new CommandArgs("", args.Player, new List<string>()));
 		}
 
 		internal static bool HasPermission(Rank rank, Rank required)

@@ -22,7 +22,6 @@ namespace ClansPlugin
 		public override string Name => "Clans";
 		public override Version Version => Assembly.GetExecutingAssembly().GetName().Version;
 
-
 		public override void Initialize()
 		{
 #pragma warning disable
@@ -35,12 +34,6 @@ namespace ClansPlugin
 			{
 				e.Player.SendInfoMessage("In clan: " + e.Player.IsInClan());
 				e.Player.SendInfoMessage("Is Member: " + (e.Player.GetMember() != null));
-
-				if (e.Player.IsInClan())
-				{
-					e.Player.GetClan().SetMotd("We are a lovely clan, you are a cunt :D");
-				}
-
 			}), "clantest"));
 
 			PlayerHooks.PlayerPostLogin += PlayerHooks_PlayerPostLogin;
@@ -55,24 +48,33 @@ namespace ClansPlugin
 
 		private void ClanHooks_ClanJoined(ClanJoinedEventArgs args)
 		{
-			args.Clan.SendMessage("{0} has joined the clan!", args.Player.Name);
+			args.Clan.SendMessage("{0} has joined the clan.", args.Player.Name);
 			if (!string.IsNullOrEmpty(args.Clan.Motd))
 				args.Player.SendInfoMessage($"[Clan Motd] - {args.Clan.Motd}");
 		}
 
 		private void ClanHooks_ClanLeft(ClanLeftEventArgs args)
 		{
-			args.Clan.SendMessage("{0} has left the clan!", args.Player.Name);
+			if (args.Kick)
+			{
+				args.Clan.SendMessage("{0} has been kicked from the clan.", args.Player.Name);
+				args.Player.SendErrorMessage("You were kicked from the clan!");
+			}
+			else
+			{
+				args.Clan.SendMessage("{0} has left the clan.", args.Player.Name);
+				args.Player.SendInfoMessage("You have left the clan.");
+			}
 		}
 
 		private void ClanHooks_ClanDisbanded(ClanDisbandedEventArgs args)
 		{
-			TSPlayer.All.SendInfoMessage($"Clan {args.Clan.Name} has been disbanded!");
+			TSPlayer.All.SendInfoMessage($"Clan {args.Clan.Name} has been disbanded.");
 		}
 
 		private void ClanHooks_ClanCreated(ClanCreatedEventArgs args)
 		{
-			TSPlayer.All.SendInfoMessage($"A new clan ({args.Clan.Name}) has been created by {args.Player.Name}!");
+			TSPlayer.All.SendInfoMessage($"A new clan ({args.Clan.Name}) has been created by {args.Player.Name}.");
 		}
 
 		private void PlayerHooks_PlayerPostLogin(PlayerPostLoginEventArgs e)
@@ -93,7 +95,7 @@ namespace ClansPlugin
 		{
 			if (!args.Player.IsLoggedIn)
 			{
-				args.Player.SendErrorMessage("You need to be logged in to use this command!");
+				args.Player.SendErrorMessage("You need to be logged in to use this command.");
 				return;
 			}
 			string cmd = args.Parameters.Count > 0 ? args.Parameters[0] : "help";

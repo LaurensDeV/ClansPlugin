@@ -19,9 +19,8 @@ namespace ClanAPI.DB
 		internal Dictionary<string, Clan> ClanCache;
 		public const string MemberKey = "member";
 		private static IDbConnection connection;
-
-
 		private static ClanDB _instance;
+
 		public static ClanDB Instance
 		{
 			get
@@ -64,6 +63,9 @@ namespace ClanAPI.DB
 			LoadClans();
 		}
 
+		/// <summary>
+		/// Readonly collection of all the clans.
+		/// </summary>
 		public IReadOnlyCollection<Clan> Clans => ClanCache.Values.ToArray();
 
 		public int Query(string query, params object[] args)
@@ -74,6 +76,14 @@ namespace ClanAPI.DB
 		public QueryResult QueryReader(string query, params object[] args)
 		{
 			return connection.QueryReader(query, args);
+		}
+
+		internal void SetRank(Member member, Rank rank)
+		{
+			Task.Run(() =>
+			{
+				connection.Query("UPDATE Members SET Rank = @0 WHERE Username = @1", (int)rank, member.Username);
+			});
 		}
 
 		internal void SetPrefix(Clan clan, string prefix)
@@ -137,8 +147,11 @@ namespace ClanAPI.DB
 				connection.Query("DELETE FROM Clans WHERE Name = @0", clan.Name);
 				foreach (TSPlayer ts in TShock.Players)
 				{
-					UnLoadMember(ts);
-					ClanHooks.OnClanLeft(clan, player, false);
+					if (ts != null && ts.GetClan() == clan)
+					{
+						UnLoadMember(ts);
+						ClanHooks.OnClanLeft(clan, player, false);
+					}
 				}
 				ClanCache.Remove(clan.Name);
 			});
@@ -155,11 +168,14 @@ namespace ClanAPI.DB
 				ts.SetData(MemberKey, mbr);
 		}
 
-		public async void RemoveMember(TSPlayer ts)
+		public async void RemoveMember(TSPlayer ts, bool kick)
 		{
 			await Task.Run(() =>
 			{
-
+				connection.Query("DELETE FROM Members WHERE Username = @0", ts.Name);
+				Clan clan = ts.GetClan();
+				UnLoadMember(ts);
+				ClanHooks.OnClanLeft(clan, ts, kick);
 			});
 		}
 

@@ -17,6 +17,12 @@ namespace ClanAPI
 		public Rank Rank { get; set; }
 
 		public bool Muted { get; set; }
+
+		public void SetRank(Rank rank)
+		{
+			ClanDB.Instance.SetRank(this, rank);
+			this.Rank = rank;
+		}
 	}
 
 	//For some reason the database stores Rank as an Int64, 
