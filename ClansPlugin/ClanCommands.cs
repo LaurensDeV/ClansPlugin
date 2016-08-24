@@ -105,6 +105,26 @@ namespace ClansPlugin
 			args.Player.GetClan().SendMessage("{0} changed the clan's motd to \"{1}\"", args.Player.Name, motd);
 		}
 
+		[ClanCommand("description", Parameters = "[new description]", Description = "Gets or sets the clan's description.", Permission = Rank.Owner)]
+		internal static void DescriptionCommand(CommandArgs args)
+		{
+			if (args.Parameters.Count == 0)
+			{
+				args.Player.SendInfoMessage($"The current description is: \"{args.Player.GetClan().Motd}\".");
+				args.Player.SendInfoMessage($"Type {Commands.Specifier}clan description [new description] to change the description");
+				return;
+			}
+			string description = string.Join(" ", args.Parameters);
+			if (description.Length > 100)
+			{
+				args.Player.SendErrorMessage("The description cannot be longer than 100 characters.");
+				return;
+			}
+			Clan clan = args.Player.GetClan();
+			clan.SetDescription(description);
+			args.Player.GetClan().SendMessage("{0} changed the clan's description to \"{1}\"", args.Player.Name, description);
+		}
+
 		[ClanCommand("prefix", Parameters = "[new prefix]", Description = "Gets or sets your clan's prefix.", Permission = Rank.Owner)]
 		internal static void PrefixCommand(CommandArgs args)
 		{
@@ -442,21 +462,21 @@ namespace ClansPlugin
 			if (!PaginationTools.TryParsePageNumber(args.Parameters, 0, args.Player, out pageNum))
 				return;
 
-			PaginationTools.SendPage(args.Player, pageNum, PaginationTools.BuildLinesFromTerms(
-				ClanDB.Instance.Clans,
-				(o) =>
-				{
-					var clan = (Clan)o;
-					var msg = $"{clan.Name} - {clan.Description}";
-					msg += msg.Length < 80 ? new string(' ', 80 - msg.Length) : "";
-					return msg;
-				}
-			), new PaginationTools.Settings()
+			int max = (int)Math.Ceiling((double)ClanDB.Instance.Clans.Count / 5);
+			pageNum = Math.Min(max, pageNum);
+
+			var items = ClanDB.Instance.Clans.Where((c, i) => i > (pageNum - 1) * 5 - 1 && i < pageNum * 5).Select((c, i) => $"{(pageNum - 1) * 5 + i + 1} {c.Name} - {c.Description}");
+
+			if (items.Count() == 0)
 			{
-				HeaderFormat = "Clan List ({0}/{1})",
-				FooterFormat = "Type {0}clan list {{0}} for more.".SFormat(TShock.Config.CommandSpecifier),
-				NothingToDisplayString = "There are currently no clans to list.",
-			});
+				args.Player.SendErrorMessage("There are currently no clans to list.");
+				return;
+			}
+			args.Player.SendSuccessMessage("Clan List ({0}/{1})", pageNum, max);
+			foreach (var item in items)
+				args.Player.SendInfoMessage(item);
+			if (pageNum < max)
+				args.Player.SendInfoMessage($"Type {Commands.Specifier}clan list {pageNum + 1} for more.");
 		}
 
 		[ClanCommand("reload", Description = "reload all clans and clanmembers")]
