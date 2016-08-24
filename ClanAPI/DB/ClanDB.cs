@@ -78,59 +78,69 @@ namespace ClanAPI.DB
 			return connection.QueryReader(query, args);
 		}
 
-		internal void SetRank(Member member, Rank rank)
+
+
+		internal async void SetRank(Member member, Rank rank)
 		{
-			Task.Run(() =>
+			await Task.Run(() =>
 			{
 				connection.Query("UPDATE Members SET Rank = @0 WHERE Username = @1", (int)rank, member.Username);
 			});
 		}
 
-		internal void SetPrefix(Clan clan, string prefix)
+		internal async void UpdateRanks(Clan clan)
 		{
-			Task.Run(() =>
+			await Task.Run(() =>
 			{
-				connection.Query("UPDATE Clans SET Prefix = @0 WHERE Name = @1", prefix, clan.Name);
+				connection.Query("UPDATE Clans SET Ranks = @0 WHERE Name = @1", clan.Ranks, clan.Name);
 			});
 		}
 
-		internal void SetMotd(Clan clan, string motd)
+		internal async void UpdatePrefix(Clan clan)
 		{
-			Task.Run(() =>
+			await Task.Run(() =>
 			{
-				connection.Query("UPDATE Clans SET Motd = @0 WHERE Name = @1", motd, clan.Name);
+				connection.Query("UPDATE Clans SET Prefix = @0 WHERE Name = @1", clan.Prefix, clan.Name);
 			});
 		}
 
-		internal void SetChatColor(Clan clan, string chatColor)
+		internal async void UpdateMotd(Clan clan)
 		{
-			Task.Run(() =>
+			await Task.Run(() =>
 			{
-				connection.Query("UPDATE Clans SET ChatColor = @0 WHERE Name = @1", chatColor, clan.Name);
+				connection.Query("UPDATE Clans SET Motd = @0 WHERE Name = @1", clan.Motd, clan.Name);
 			});
 		}
 
-		internal void SetDescription(Clan clan, string description)
+		internal async void UpdateChatColor(Clan clan)
 		{
-			Task.Run(() =>
+			await Task.Run(() =>
 			{
-				connection.Query("UPDATE Clans SET Description = @0 WHERE Name = @1", description, clan.Name);
+				connection.Query("UPDATE Clans SET ChatColor = @0 WHERE Name = @1", clan.ChatColor, clan.Name);
 			});
 		}
 
-		internal void SetSuffix(Clan clan, string suffix)
+		internal async void UpdateDescription(Clan clan)
 		{
-			Task.Run(() =>
+			await Task.Run(() =>
 			{
-				connection.Query("UPDATE Clans SET Suffix = @0 WHERE Name = @1", suffix, clan.Name);
+				connection.Query("UPDATE Clans SET Description = @0 WHERE Name = @1", clan.Description, clan.Name);
 			});
 		}
 
-		internal void SetName(Clan clan, string name)
+		internal async void UpdateSuffix(Clan clan)
 		{
-			Task.Run(() =>
+			await Task.Run(() =>
 			{
-				connection.Query("UPDATE Clans SET Name = @0 WHERE Name = @1", name, clan.Name);
+				connection.Query("UPDATE Clans SET Suffix = @0 WHERE Name = @1", clan.Suffix, clan.Name);
+			});
+		}
+
+		internal async void UpdateName(Clan clan)
+		{
+			await Task.Run(() =>
+			{
+				connection.Query("UPDATE Clans SET Name = @0 WHERE Name = @1", clan.Name, clan.Name);
 			});
 		}
 

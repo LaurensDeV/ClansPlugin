@@ -9,5 +9,6 @@ namespace ClansPlugin
 	public static class Permission
 	{
 		public const string CreateClan = "clans.create";
+		public const string Reload = "clans.reload";
 	}
 }

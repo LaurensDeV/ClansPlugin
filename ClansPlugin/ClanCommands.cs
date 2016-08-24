@@ -12,6 +12,29 @@ namespace ClansPlugin
 {
 	public class ClanCommands
 	{
+		[ClanCommand("c", Parameters = "(or /c) <message>", Description = "Sends a message to your clan.", Permission = Rank.Recruit)]
+		internal static void CSayCommand(CommandArgs args)
+		{
+			Clan clan = args.Player.GetClan();
+			if (!args.Player.IsInClan())
+			{
+				args.Player.SendErrorMessage("You are not in a clan!");
+				return;
+			}
+			if (args.Parameters.Count < 1)
+			{
+				args.Player.SendErrorMessage("You must enter a message.");
+				return;
+			}
+			if (args.Player.mute || args.Player.GetMember().Muted)
+			{
+				args.Player.SendErrorMessage("You are muted!");
+				return;
+			}
+			string message = string.Join(" ", args.Parameters);
+			clan.SendMessage("{0} {1} {2}: {3} {4}", clan.Prefix, clan.RankNames[(int)args.Player.GetMember().Rank], args.Player.Name, message, clan.Suffix);
+		}
+
 		[ClanCommand("create", Parameters = "<name>", Description = "Create a clan.")]
 		internal static void CreateCommand(CommandArgs args)
 		{
@@ -233,6 +256,22 @@ namespace ClansPlugin
 			clan.SendMessage("{0} has been demoted to {1}", plr.Name, newRank);
 		}
 
+		[ClanCommand("setrank", Parameters = "<1-5> <name>", Description = "Changes the names of ranks in your clan.", Permission = Rank.Owner)]
+		internal static void SetrankCommand(CommandArgs args)
+		{
+			int rankIndex = 0;
+			if (args.Parameters.Count < 2 || (args.Parameters.Count >= 2 && !int.TryParse(args.Parameters[0], out rankIndex)))
+			{
+				args.Player.SendErrorMessage($"Invalid syntax! proper syntax: {Commands.Specifier}clan setrank <1-5> <new name>");
+				return;
+			}
+			string name = string.Join(" ", args.Parameters.GetRange(1, args.Parameters.Count - 1));
+			Clan clan = args.Player.GetClan();
+			string oldName = clan.RankNames[rankIndex -1];
+			args.Player.GetClan().SetRank(rankIndex - 1, name);
+			clan.SendMessage("Rank {0} has been renamed to {1}.", oldName, name);
+		}
+
 		[ClanCommand("kick", Parameters = "<player>", Description = "Kicks a player from your clan.", Permission = Rank.Admin)]
 		internal static void KickCommand(CommandArgs args)
 		{
@@ -420,27 +459,22 @@ namespace ClansPlugin
 			});
 		}
 
-		[ClanCommand("c", Parameters = "(or /c) <message>", Description = "Sends a message to your clan.", Permission = Rank.Recruit)]
-		internal static void CSayCommand(CommandArgs args)
+		[ClanCommand("reload", Description = "reload all clans and clanmembers")]
+		internal static void ReloadCommand(CommandArgs args)
 		{
-			Clan clan = args.Player.GetClan();
-			if (!args.Player.IsInClan())
+			if (!args.Player.HasPermission(Permission.Reload))
 			{
-				args.Player.SendErrorMessage("You are not in a clan!");
+				args.Player.SendErrorMessage("You to not have permission to use this command.");
 				return;
 			}
-			if (args.Parameters.Count < 1)
+			ClanDB.Instance.LoadClans();
+			foreach (TSPlayer ts in TShock.Players)
 			{
-				args.Player.SendErrorMessage("You must enter a message.");
-				return;
+				if (ts == null)
+					continue;
+				ClanDB.Instance.LoadMember(ts);
 			}
-			if (args.Player.mute || args.Player.GetMember().Muted)
-			{
-				args.Player.SendErrorMessage("You are muted!");
-				return;
-			}
-			string message = string.Join(" ", args.Parameters);
-			clan.SendMessage("{0} {1} {2}: {3} {4}", clan.Prefix, clan.RankNames[(int)args.Player.GetMember().Rank], args.Player.Name, message, clan.Suffix);
+			args.Player.SendInfoMessage("Clans and members have been reloaded from the database.");
 		}
 
 		[ClanCommand("help", Description = "gives info on clan commands.")]

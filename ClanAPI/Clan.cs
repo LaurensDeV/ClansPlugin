@@ -40,45 +40,44 @@ namespace ClanAPI
 
 		public void SetName(string name)
 		{
-			ClanDB.Instance.SetName(this, name);
 			this.Name = name;
+			ClanDB.Instance.UpdateName(this);
 		}
 
 		public void SetDescription(string description)
 		{
-			ClanDB.Instance.SetDescription(this, description);
 			this.Description = description;
+			ClanDB.Instance.UpdateDescription(this);
 		}
 
 		public void SetSuffix(string suffix)
 		{
-			ClanDB.Instance.SetSuffix(this, suffix);
 			this.Suffix = suffix;
+			ClanDB.Instance.UpdateSuffix(this);
 		}
 
 		public void SetPrefix(string prefix)
 		{
-			ClanDB.Instance.SetPrefix(this, prefix);
 			this.Prefix = prefix;
+			ClanDB.Instance.UpdatePrefix(this);
 		}
 
 		public void SetChatColor(string color)
 		{
-			ClanDB.Instance.SetChatColor(this, color);
 			this.ChatColor = color;
+			ClanDB.Instance.UpdateChatColor(this);
 		}
 
 		public void SetMotd(string motd)
 		{
-			ClanDB.Instance.SetMotd(this, motd);
 			this.Motd = motd;
+			ClanDB.Instance.UpdateMotd(this);
 		}
 
-		public void SetRanks(string ranks)
+		public void SetRank(int index, string name)
 		{
-			//NOT IMPLEMENTED, TODO
-			//ClanDB.Instance.(this, name);
-			this.Ranks = ranks;
+			this.RankNames[index] = name;
+			ClanDB.Instance.UpdateRanks(this);
 		}
 
 		public Clan() { }
